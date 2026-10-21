@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <script>
+      // Suppress benign [vite] websocket connection messages and errors in dev environment
+      (function() {
+        const isViteWs = (msg) => {
+          if (!msg) return false;
+          try {
+            const s = typeof msg === 'object' ? (msg.message || msg.reason || '') : String(msg);
+            return s.includes('[vite]') || s.includes('failed to connect to websocket') || s.includes('WebSocket connection to') || s.includes('server connection lost');
+          } catch (e) {
+            return false;
+          }
+        };
+        ['error', 'warn', 'log', 'info', 'debug'].forEach(function(m) {
+          const orig = console[m];
+          if (typeof orig === 'function') {
+            console[m] = function(...args) {
+              if (args.some(isViteWs)) return;
+              orig.apply(console, args);
+            };
+          }
+        });
+        window.addEventListener('error', function(e) {
+          if (isViteWs(e.message) || isViteWs(e.filename)) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+          }
+        }, true);
+        window.addEventListener('unhandledrejection', function(e) {
+          if (isViteWs(e.reason)) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+          }
+        }, true);
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="POS" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <title>OH Store</title>
+    <meta name="description" content="Micro-SaaS B2B móvil para bodegas: POS rápido con código de barras, fiados, inventario dinámico, cierre de caja y arquitectura AppSheet + Google Sheets." />
+    <meta property="og:title" content="OH Store" />
+    <meta property="og:description" content="Micro-SaaS B2B móvil para bodegas: POS rápido con código de barras, fiados, inventario dinámico, cierre de caja y arquitectura AppSheet + Google Sheets." />
+  </head>
+  <body class="bg-black text-white antialiased selection:bg-[#D4B848]/30 selection:text-[#D4B848]">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

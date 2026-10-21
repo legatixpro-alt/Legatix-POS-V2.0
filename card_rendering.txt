@@ -1,0 +1,423 @@
+                id={`cliente-card-${cliente.ID_Cliente}`}
+                className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-2.5 space-y-2 shadow-sm"
+              >
+                {/* Header with Rank and Debt */}
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-2 flex-1 pr-2">
+                    <span className="w-4 h-4 rounded-md bg-[#222222] text-gray-400 text-[9px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                      #{index + 1}
+                    </span>
+                    <div>
+                      <h4 className="font-bold text-xs text-white leading-tight font-sans">
+                        {cliente.Nombre_Completo}
+                      </h4>
+                      <div className="flex items-center gap-2 text-[10px] text-gray-500 mt-0.5">
+                        <span className="flex items-center gap-1">
+                          <Phone size={10} />
+                          {cliente.Telefono_WhatsApp}
+                        </span>
+                        {cliente.Ultimo_Movimiento && (
+                          <span>• {cliente.Ultimo_Movimiento}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Debt Amount Display */}
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-[#FF5252]">
+                      {formatUSD(cliente.Deuda_Total)}
+                    </div>
+                    <div className="text-[10px] font-bold text-gray-500">
+                      {formatLocal(cliente.Deuda_Total, config.tasaCambioUSD, config.simboloMonedaLocal)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Credit Limit Progress Bar */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[9px] text-gray-500">
+                    <span>
+                      USO CRÉDITO: <strong className="text-gray-300">{percentageUsed}%</strong>
+                    </span>
+                    <span>LÍMITE: {formatUSD(cliente.Limite_Credito)}</span>
+                  </div>
+                  <div className="w-full h-1 bg-[#222222] rounded-md overflow-hidden">
+                    <div
+                      className={`h-full transition-all ${
+                        isOverLimit
+                          ? 'bg-[#FF5252]'
+                          : isHighDebt
+                          ? 'bg-[#F59E0B]'
+                          : 'bg-gradient-to-r from-[#00E676] to-[#00C853] border border-[#00E676]/50'
+                      }`}
+                      style={{ width: `${percentageUsed}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Quick Action Buttons (Fat-Finger Friendly for Mobile) */}
+                <div className="flex gap-1.5 pt-1 border-t border-[#262626]">
+                  {/* WhatsApp Reminder Button */}
+                  <a
+                    id={`btn-wa-cobro-${cliente.ID_Cliente}`}
+                    href={generateWhatsAppCobroLink(cliente, config)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 bg-[#14261B] hover:bg-[#1A3324] active:scale-95 border border-[#25D366]/40 text-[#25D366] py-1.5 px-2 rounded-md text-[11px] font-mono font-bold flex items-center justify-center gap-1 transition-transform"
+                    title="Enviar Cobro por WhatsApp"
+                  >
+                    <Smartphone size={13} className="text-[#25D366]" />
+                    <span>WhatsApp</span>
+                  </a>
+
+                  {/* Copy Cobro Link Button */}
+                  <button
+                    onClick={() => handleCopyWhatsAppText(cliente)}
+                    className="bg-[#222222] hover:bg-[#2A2A2A] active:scale-90 text-gray-400 hover:text-white p-1.5 rounded-md text-xs flex items-center justify-center transition-transform"
+                    title="Copiar texto de cobro"
+                  >
+                    {copiedLinkIndex === cliente.ID_Cliente ? (
+                      <Check size={13} className="text-[#00E676]" />
+                    ) : (
+                      <Copy size={13} />
+                    )}
+                  </button>
+
+                  {/* Registrar Abono Action Button */}
+                  <button
+                    id={`btn-abonar-${cliente.ID_Cliente}`}
+                    onClick={() => handleOpenAbonoModal(cliente)}
+                    disabled={cliente.Deuda_Total <= 0}
+                    className="bg-gradient-to-br from-[#D4AF37] to-[#B8860B] text-[#121212] font-bold rounded-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.4),0_2px_4px_rgba(0,0,0,0.5)] hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.5),0_4px_8px_rgba(212,175,55,0.3)] active:scale-95 transition-all uppercase flex items-center justify-center gap-1.5 py-2 px-3 text-xs w-full"
+                  >
+                    <PlusCircle size={13} className="stroke-[2.5]" />
+                    <span>ABONAR</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto font-mono p-3 space-y-3">
+          <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A] flex justify-between items-center">
+            <div>
+              <div className="text-[10px] text-gray-500 uppercase">Gastos Totales (Día)</div>
+              <div className="text-xl font-bold text-[#FF5252]">
+                {formatUSD(gastos.reduce((sum, g) => sum + g.Monto_USD, 0))}
+              </div>
+            </div>
+            <button
+              onClick={() => setShowNuevoGastoModal(true)}
+              className="bg-[#2A2A2A] text-white px-3 py-2 rounded text-xs font-bold uppercase flex items-center gap-2 border border-[#333] hover:bg-[#333] active:scale-95 transition-all"
+            >
+              <PlusCircle size={14} />
+              Nuevo Gasto
+            </button>
+          </div>
+
+          <div className="space-y-2 pb-20">
+            {gastos.length === 0 ? (
+              <div className="text-center text-gray-500 py-10 text-xs">No hay gastos registrados.</div>
+            ) : (
+              gastos.map(g => (
+                <div key={g.ID_Gasto} className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]">
+                  <div className="flex justify-between items-start mb-1">
+                    <span className="text-xs font-bold text-white uppercase">{g.Descripcion}</span>
+                    <span className="text-sm font-bold text-[#FF5252]">{formatUSD(g.Monto_USD)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] text-gray-500">
+                    <span className="uppercase">{g.Categoria} • {g.Metodo_Pago}</span>
+                    <span>{new Date(g.Fecha_Hora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Nuevo Gasto */}
+      {showNuevoGastoModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 font-mono">
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl w-full max-w-sm p-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-2.5 border-b border-[#2A2A2A] mb-3">
+              <h3 className="text-xs font-bold text-white flex items-center gap-1.5 uppercase">
+                <TrendingDown className="text-[#FF5252]" size={16} />
+                Registrar Gasto
+              </h3>
+              <button onClick={() => setShowNuevoGastoModal(false)} className="text-gray-400 hover:text-white text-xs font-bold">✕</button>
+            </div>
+            <form onSubmit={handleCreateGasto} className="space-y-2.5">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Concepto del Gasto:</label>
+                <input type="text" required placeholder="Ej: Pago de Luz, Compra Harina..." value={gastoDesc} onChange={(e) => setGastoDesc(e.target.value)} className="w-full bg-[#0E0E0E] border border-[#2A2A2A] focus:border-[#FF5252] rounded-md px-2.5 py-1.5 text-xs text-white outline-hidden" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Monto (USD):</label>
+                  <input type="number" step="0.01" min="0" required value={gastoMonto} onChange={(e) => setGastoMonto(e.target.value)} className="w-full bg-[#0E0E0E] border border-[#2A2A2A] focus:border-[#FF5252] rounded-md px-2.5 py-1.5 text-xs text-white outline-hidden" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Categoría:</label>
+                  <select value={gastoCat} onChange={(e) => setGastoCat(e.target.value as any)} className="w-full bg-[#0E0E0E] border border-[#2A2A2A] focus:border-[#FF5252] rounded-md px-2.5 py-1.5 text-xs text-white outline-hidden">
+                    <option value="Inventario">Inventario</option>
+                    <option value="Servicios">Servicios</option>
+                    <option value="Personal">Personal</option>
+                    <option value="Mantenimiento">Mantenimiento</option>
+                    <option value="Otros">Otros</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Método de Pago:</label>
+                <select value={gastoMetodo} onChange={(e) => setGastoMetodo(e.target.value as any)} className="w-full bg-[#0E0E0E] border border-[#2A2A2A] focus:border-[#FF5252] rounded-md px-2.5 py-1.5 text-xs text-white outline-hidden">
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Pago Móvil">Pago Móvil</option>
+                  <option value="Divisa">Divisa</option>
+                </select>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={() => setShowNuevoGastoModal(false)} className="w-1/3 bg-[#242424] text-gray-300 py-2 rounded-md text-xs font-bold uppercase">Cancelar</button>
+                <button type="submit" className="bg-[#FF5252] text-white font-bold rounded-md flex-1 py-2 text-xs uppercase hover:bg-[#FF5252]/80 transition-all">Guardar Gasto</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Registrar Abono */}
+      {selectedClienteForAbono && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 font-mono">
+          <div className="bg-[#1A1A1A] border-t sm:border border-[#2A2A2A] rounded-t-2xl sm:rounded-2xl w-full max-w-md p-4 shadow-2xl animate-in slide-in-from-bottom-6 duration-200">
+            <div className="flex items-center justify-between pb-2.5 border-b border-[#2A2A2A] mb-3">
+              <h3 className="text-xs font-bold text-white flex items-center gap-1.5 uppercase">
+                <PlusCircle className="text-[#00E676]" size={16} />
+                Registrar Abono a Deuda
+              </h3>
+              <button
+                onClick={() => setSelectedClienteForAbono(null)}
+                className="text-gray-400 hover:text-white text-xs font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="bg-[#121212] border border-[#2A2A2A] rounded-lg p-2.5 mb-3">
+              <div className="text-[10px] text-gray-500 uppercase">Cliente:</div>
+              <div className="text-xs font-bold text-white font-sans">
+                {selectedClienteForAbono.Nombre_Completo}
+              </div>
+              <div className="flex justify-between items-center mt-1.5 pt-1.5 border-t border-[#222222]">
+                <span className="text-[10px] text-gray-400">Deuda Actual:</span>
+                <span className="text-sm font-bold text-[#FF5252]">
+                  {formatUSD(selectedClienteForAbono.Deuda_Total)}
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleConfirmAbono} className="space-y-2.5">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                  Monto a Abonar (USD):
+                </label>
+                <div className="relative">
+                  <input
+                    id="input-monto-abono"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    max={selectedClienteForAbono.Deuda_Total}
+                    value={montoAbonoInput}
+                    onChange={(e) => setMontoAbonoInput(e.target.value)}
+                    className="w-full bg-[#0E0E0E] border border-[#2A2A2A] focus:border-[#00E676] rounded-md px-3 py-2 text-base font-bold text-white outline-hidden font-mono"
+                    placeholder="0.00"
+                    autoFocus
+                  />
+                  <span className="absolute right-3 top-2 text-xs font-bold text-[#00E676]">
+                    USD
+                  </span>
+                </div>
+                {montoAbonoInput && !isNaN(parseFloat(montoAbonoInput)) && (
+                  <div className="text-[10px] text-gray-500 mt-1">
+                    Equivale a:{' '}
+                    <strong className="text-gray-300">
+                      {formatLocal(parseFloat(montoAbonoInput), config.tasaCambioUSD, config.simboloMonedaLocal)}
+                    </strong>
+                  </div>
+                )}
+              </div>
+
+              {/* Método de Pago del Abono */}
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                  Método de Pago:
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(['Efectivo', 'Pago Móvil', 'Divisa'] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setMetodoAbono(m)}
+                      className={`p-1.5 rounded-md border text-[11px] font-bold uppercase transition-all ${
+                        metodoAbono === m
+                          ? 'bg-[#1E1E1E] border-[#00E676] text-[#00E676]'
+                          : 'bg-[#1A1A1A] border-[#2A2A2A] text-gray-500'
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-gray-400 mb-1">
+                  Referencia / Nota (opcional):
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: Ref #8491 o Billetes $20"
+                  value={comprobanteRef}
+                  onChange={(e) => setComprobanteRef(e.target.value)}
+                  className="w-full bg-[#0E0E0E] border border-[#2A2A2A] focus:border-[#00E676] rounded-md px-2.5 py-1.5 text-xs text-white outline-hidden font-mono"
+                />
+              </div>
+
+              {/* Saldo Restante Preview */}
+              {montoAbonoInput && !isNaN(parseFloat(montoAbonoInput)) && (
+                <div className="bg-[#14261B] border border-[#00E676]/40 rounded-md p-2 text-xs flex justify-between items-center">
+                  <span className="text-[10px] text-[#A7F3D0] uppercase">Saldo restante:</span>
+                  <span className="font-bold text-[#00E676]">
+                    {formatUSD(Math.max(0, selectedClienteForAbono.Deuda_Total - parseFloat(montoAbonoInput)))}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedClienteForAbono(null)}
+                  className="w-1/3 bg-[#242424] hover:bg-[#2C2C2C] text-gray-300 py-2.5 rounded-md text-xs font-bold uppercase"
+                >
+                  Cancelar
+                </button>
+                <button
+                  id="btn-guardar-abono"
+                  type="submit"
+                  className="bg-gradient-to-br from-[#D4AF37] to-[#B8860B] text-[#121212] font-bold rounded-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.4),0_2px_4px_rgba(0,0,0,0.5)] hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.5),0_4px_8px_rgba(212,175,55,0.3)] active:scale-95 transition-all uppercase flex items-center justify-center gap-1.5 py-2 px-3 text-xs w-full"
+                >
+                  <CheckCircle2 size={16} className="stroke-[2.5]" />
+                  <span>REGISTRAR ABONO</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Nuevo Cliente Deudor */}
+      {showNuevoClienteModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 font-mono">
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl w-full max-w-sm p-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-2.5 border-b border-[#2A2A2A] mb-3">
+              <h3 className="text-xs font-bold text-white flex items-center gap-1.5 uppercase">
+                <UserPlus className="text-[#00E676]" size={16} />
+                Nuevo Cliente de Confianza
+              </h3>
+              <button
+                onClick={() => setShowNuevoClienteModal(false)}
+                className="text-gray-400 hover:text-white text-xs font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNewClient} className="space-y-2.5">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                  Nombre Completo / Apodo:
+                </label>
+                <input
+                  id="input-nuevo-cliente-nombre"
+                  type="text"
+                  required
+                  placeholder="Ej: Doña Maria (Casa 4)"
+                  value={newNombre}
+                  onChange={(e) => setNewNombre(e.target.value)}
+                  className="w-full bg-[#0E0E0E] border border-[#2A2A2A] focus:border-[#00E676] rounded-md px-2.5 py-1.5 text-xs text-white outline-hidden font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                  WhatsApp (para cobros):
+                </label>
+                <input
+                  id="input-nuevo-cliente-telefono"
+                  type="text"
+                  required
+                  placeholder="+584121234567"
+                  value={newTelefono}
+                  onChange={(e) => setNewTelefono(e.target.value)}
+                  className="w-full bg-[#0E0E0E] border border-[#2A2A2A] focus:border-[#00E676] rounded-md px-2.5 py-1.5 text-xs text-white outline-hidden font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                  Límite Máximo de Fiado (USD):
+                </label>
+                <input
+                  id="input-nuevo-cliente-limite"
+                  type="number"
+                  step="5"
+                  min="5"
+                  required
+                  value={newLimite}
+                  onChange={(e) => setNewLimite(e.target.value)}
+                  className="w-full bg-[#0E0E0E] border border-[#2A2A2A] focus:border-[#00E676] rounded-md px-2.5 py-1.5 text-xs text-white outline-hidden font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-gray-400 mb-1">
+                  Notas de referencia (opcional):
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Ej: Paga quincenal. Vecino de confianza."
+                  value={newNotas}
+                  onChange={(e) => setNewNotas(e.target.value)}
+                  className="w-full bg-[#0E0E0E] border border-[#2A2A2A] focus:border-[#00E676] rounded-md p-2 text-xs text-white outline-hidden font-mono"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowNuevoClienteModal(false)}
+                  className="w-1/3 bg-[#242424] text-gray-300 py-2 rounded-md text-xs font-bold uppercase"
+                >
+                  Cancelar
+                </button>
+                <button
+                  id="btn-guardar-nuevo-cliente"
+                  type="submit"
+                  className="bg-gradient-to-br from-[#D4AF37] to-[#B8860B] text-[#121212] font-bold rounded-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.4),0_2px_4px_rgba(0,0,0,0.5)] hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.5),0_4px_8px_rgba(212,175,55,0.3)] active:scale-95 transition-all uppercase flex items-center justify-center gap-1.5 py-2 px-3 text-xs w-full"
+                >
+                  GUARDAR
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
