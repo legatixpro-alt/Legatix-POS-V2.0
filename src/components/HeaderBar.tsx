@@ -550,6 +550,9 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 <Calculator size={18} className="text-[#D4AF37]" />
                 <span className="text-xs font-bold font-display uppercase tracking-wider">Calculadora Rápida</span>
               </button>
+
+              {/* Instalar como app nativa (PWA) */}
+              <PWAInstallButton />
             </div>
             
             <div className="mt-auto pt-6 pb-6">

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, User, AlertCircle, ShieldAlert } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { PWAInstallButton } from './PWAInstallButton';
 import { isUserBlocked, recordFailedAttempt, resetFailedAttempts } from '../utils/securityManager';
 
 interface LoginScreenProps {
@@ -185,6 +186,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             </button>
 
           </form>
+        </div>
+
+        {/* Instalar como app nativa */}
+        <div className="w-full">
+          <PWAInstallButton />
         </div>
 
       </div>
