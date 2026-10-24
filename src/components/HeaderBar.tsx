@@ -81,15 +81,21 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             >
               <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-[#D4AF37] to-[#8C6D1F] p-0.5 shrink-0 shadow-[0_0_14px_rgba(212,175,55,0.4)]">
                 <img 
-                  src="/oh-store-logo.jpg" 
-                  alt="OH Store" 
+                  src="/pwa-512x512.png" 
+                  alt="Legatix" 
                   className="w-full h-full object-cover rounded-full"
                 />
               </div>
               <div className="flex flex-col shrink-0 min-w-max">
-                <span className="text-sm xs:text-base sm:text-lg md:text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-[#FFF0BA] via-[#D4AF37] to-[#ECC855] font-display uppercase leading-tight whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                  {config?.nombreBodega || 'OH STORE'}
-                </span>
+                <div className="flex items-baseline gap-1.5 whitespace-nowrap">
+                  <span className="text-sm xs:text-base sm:text-lg md:text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-[#FFF0BA] via-[#D4AF37] to-[#ECC855] font-display uppercase leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                    LEGATIX
+                  </span>
+                  <span className="text-gray-600 text-xs">|</span>
+                  <span className="text-[11px] xs:text-xs sm:text-sm font-bold tracking-wide text-white font-display uppercase leading-tight truncate max-w-[110px] xs:max-w-[150px] sm:max-w-[240px]" title={config?.nombreBodega || 'OH Store'}>
+                    {config?.nombreBodega || 'OH Store'}
+                  </span>
+                </div>
                 <div className="flex items-center gap-1.5 text-[9px] xs:text-[10px] sm:text-[11px] text-gray-400 font-mono whitespace-nowrap mt-0.5">
                   {config?.propietario && (
                     <>
