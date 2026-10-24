@@ -28,6 +28,7 @@ import {
   isUserBlocked, 
   getBlockedUsersList, 
   unblockUser, 
+  syncBlockedUsersFromCloud,
   SUPER_ADMIN_EMAIL, 
   SECURITY_EVENT, 
   BlockedUserInfo 
@@ -59,6 +60,7 @@ export const UsuariosModule: React.FC<UsuariosModuleProps> = ({
   const [blockedUsers, setBlockedUsers] = React.useState<BlockedUserInfo[]>(() => getBlockedUsersList());
 
   React.useEffect(() => {
+    syncBlockedUsersFromCloud();
     const handleSecurityChange = () => {
       setBlockedUsers(getBlockedUsersList());
     };
@@ -182,7 +184,7 @@ export const UsuariosModule: React.FC<UsuariosModuleProps> = ({
     setEmail('');
     setTelefono('');
     setRol('Cajero');
-    setPinAcceso(Math.floor(1000 + Math.random() * 9000).toString());
+    setPinAcceso(Math.floor(100000 + Math.random() * 900000).toString());
     setActivo(true);
     setShowModal(true);
   };
@@ -204,8 +206,12 @@ export const UsuariosModule: React.FC<UsuariosModuleProps> = ({
       toast.error('El nombre del usuario es obligatorio');
       return;
     }
-    if (!pinAcceso || pinAcceso.length < 4) {
-      toast.error('El PIN de acceso rápido debe tener mínimo 4 dígitos');
+    if (!pinAcceso || pinAcceso.trim().length < 4) {
+      toast.error('El PIN/clave de acceso debe tener mínimo 4 caracteres');
+      return;
+    }
+    if (!editingUser && email.trim() && pinAcceso.trim().length < 6) {
+      toast.error('Para crear una cuenta con correo en Supabase Auth, el PIN/contraseña debe tener al menos 6 caracteres.');
       return;
     }
 
@@ -240,12 +246,11 @@ export const UsuariosModule: React.FC<UsuariosModuleProps> = ({
       };
       saveUsuariosList([...usuarios, newUser]);
 
-      // Sincronizar usuario también con Supabase Auth si tiene email y PIN
-      if (email.trim() && pinAcceso.trim()) {
-        const pass = pinAcceso.trim().length >= 6 ? pinAcceso.trim() : `${pinAcceso.trim()}0000`;
+      // Sincronizar usuario también con Supabase Auth si tiene email y clave >= 6 caracteres
+      if (email.trim() && pinAcceso.trim().length >= 6) {
         supabase.auth.signUp({
           email: email.trim().toLowerCase(),
-          password: pass,
+          password: pinAcceso.trim(),
           options: {
             data: {
               name: nombre.trim(),

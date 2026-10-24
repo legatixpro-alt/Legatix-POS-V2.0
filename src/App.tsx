@@ -42,7 +42,7 @@ import {
   procesarVentaAtomica,
   procesarAbonoAtomico,
 } from './lib/api';
-import { migrateFromLocalStorageIfNeeded, setAllInStore, putInStore } from './lib/storage';
+import { migrateFromLocalStorageIfNeeded, setAllInStore, getAllFromStore } from './lib/storage';
 import { supabase } from './lib/supabase';
 import { ActiveTab } from './types/schema';
 import { PosModule } from './components/PosModule';
@@ -67,63 +67,119 @@ import {
 } from './lib/offlineSyncManager';
 import { soundEffects } from './utils/audio';
 import { initNativeNavigation, recordTabNavigation, useNativeBackHandler } from './utils/nativeNavigation';
+import { isUserBlocked, syncBlockedUsersFromCloud, SUPER_ADMIN_EMAIL } from './utils/securityManager';
+
+function safeSetLocalStorage(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    console.warn(`[Storage] Cuota de localStorage alcanzada para ${key}; respaldado en IndexedDB.`, err);
+  }
+}
+
+function generateNextSequentialId(prefix: string, existingIds: string[]): string {
+  let maxNum = 0;
+  for (const id of existingIds) {
+    const match = id?.match(new RegExp(`^${prefix}-(\\d+)$`));
+    if (match) {
+      const n = parseInt(match[1], 10);
+      if (!isNaN(n) && n > maxNum) maxNum = n;
+    }
+  }
+  const candidate = `${prefix}-${(maxNum + 1).toString().padStart(3, '0')}`;
+  if (existingIds.includes(candidate)) {
+    return `${prefix}-${Date.now().toString().slice(-5)}`;
+  }
+  return candidate;
+}
 
 export default function App() {
   const [session, setSession] = useState<any>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    // Default to true so upon entering the app, user immediately gets the POS visual workspace
-    const explicitLoggedOut = localStorage.getItem('bodeguero_logged_out') === 'true';
-    if (explicitLoggedOut) return false;
-    return true;
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
   const [showRegistroModal, setShowRegistroModal] = useState<boolean>(false);
   const [preSelectedClienteForPos, setPreSelectedClienteForPos] = useState<Cliente | null>(null);
   
   useEffect(() => {
+    // Purge legacy manipulable super-admin flag from localStorage
+    localStorage.removeItem('legatix_is_super_admin');
+    syncBlockedUsersFromCloud();
+
     // Initial session fetch
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) {
+      const email = session?.user?.email?.trim().toLowerCase() || '';
+      if (session && !isUserBlocked(email)) {
+        setSession(session);
         setIsAuthenticated(true);
-        if (session.user?.email?.toLowerCase() === 'javiercol28@gmail.com') {
-          setIsSuperAdmin(true);
-        }
+        setIsSuperAdmin(email === SUPER_ADMIN_EMAIL);
         localStorage.removeItem('bodeguero_logged_out');
+      } else {
+        setSession(null);
+        setIsAuthenticated(false);
+        setIsSuperAdmin(false);
       }
+      setIsCheckingAuth(false);
+    }).catch(() => {
+      setIsCheckingAuth(false);
     });
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) {
+      const email = session?.user?.email?.trim().toLowerCase() || '';
+      if (session && !isUserBlocked(email)) {
+        setSession(session);
         setIsAuthenticated(true);
-        if (session.user?.email?.toLowerCase() === 'javiercol28@gmail.com') {
-          setIsSuperAdmin(true);
-        }
+        setIsSuperAdmin(email === SUPER_ADMIN_EMAIL);
         localStorage.removeItem('bodeguero_logged_out');
+      } else {
+        setSession(null);
+        setIsAuthenticated(false);
+        setIsSuperAdmin(false);
       }
     });
 
-    // Migrate legacy localStorage data to IndexedDB
-    migrateFromLocalStorageIfNeeded().catch((e) => console.warn('[Storage] Migration notice:', e));
+    // Migrate legacy localStorage data to IndexedDB & hydrate stores if localStorage was exceeded/empty
+    migrateFromLocalStorageIfNeeded()
+      .then(async () => {
+        const [idbProds, idbClis, idbVentas, idbAbonos, idbGastos] = await Promise.all([
+          getAllFromStore<Producto>('productos'),
+          getAllFromStore<Cliente>('clientes'),
+          getAllFromStore<VentaMaestro>('ventas'),
+          getAllFromStore<Abono>('abonos'),
+          getAllFromStore<any>('gastos'),
+        ]);
+        if (idbProds.length > 0) setProductos((prev) => (prev.length === 0 ? idbProds : prev));
+        if (idbClis.length > 0) setClientes((prev) => (prev.length === 0 ? idbClis : prev));
+        if (idbVentas.length > 0) setVentas((prev) => (prev.length === 0 ? idbVentas : prev));
+        if (idbAbonos.length > 0) setAbonos((prev) => (prev.length === 0 ? idbAbonos : prev));
+        if (idbGastos.length > 0) setGastos((prev) => (prev.length === 0 ? idbGastos : prev));
+      })
+      .catch((e) => console.warn('[Storage] Migration notice:', e));
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // Application State with LocalStorage Persistence
+  // Application State with Safe LocalStorage + IndexedDB Persistence
   const [gastos, setGastos] = useState<any[]>(() => {
-    const saved = localStorage.getItem('bodeguero_gastos_v3');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('bodeguero_gastos_v3');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
   });
 
   useEffect(() => {
-    localStorage.setItem('bodeguero_gastos_v3', JSON.stringify(gastos));
+    safeSetLocalStorage('bodeguero_gastos_v3', gastos);
+    setAllInStore('gastos', gastos).catch(() => {});
   }, [gastos]);
   
   const handleRegistrarGasto = async (nuevoGasto: any) => {
     const gastoConUser = { ...nuevoGasto, ID_Usuario: session?.user?.id || 'USR-001', user_id: session?.user?.id };
+    const descGasto = nuevoGasto.Descripcion || nuevoGasto.Concepto || 'General';
+    const montoGasto = Number(nuevoGasto.Monto_USD ?? nuevoGasto.Monto) || 0;
     setGastos(prev => [gastoConUser, ...prev]);
     if (isOnline) {
       try {
@@ -131,15 +187,15 @@ export default function App() {
         if (res) {
           toast.success('Gasto registrado y sincronizado');
         } else {
-          enqueueSyncAction('CREATE_GASTO', gastoConUser, `Gasto: ${nuevoGasto.Concepto || 'General'}`, Number(nuevoGasto.Monto) || 0);
+          enqueueSyncAction('CREATE_GASTO', gastoConUser, `Gasto: ${descGasto}`, montoGasto);
           toast.success('⚡ Gasto guardado localmente (se subirá al volver la señal)', { icon: '🛡️' });
         }
       } catch {
-        enqueueSyncAction('CREATE_GASTO', gastoConUser, `Gasto: ${nuevoGasto.Concepto || 'General'}`, Number(nuevoGasto.Monto) || 0);
+        enqueueSyncAction('CREATE_GASTO', gastoConUser, `Gasto: ${descGasto}`, montoGasto);
         toast.success('⚡ Gasto guardado localmente (se subirá al volver la señal)', { icon: '🛡️' });
       }
     } else {
-      enqueueSyncAction('CREATE_GASTO', gastoConUser, `Gasto: ${nuevoGasto.Concepto || 'General'}`, Number(nuevoGasto.Monto) || 0);
+      enqueueSyncAction('CREATE_GASTO', gastoConUser, `Gasto: ${descGasto}`, montoGasto);
       toast.success('⚡ Gasto guardado en memoria local (Modo Offline)', { icon: '🛡️' });
     }
   };
@@ -209,7 +265,8 @@ export default function App() {
   });
 
   useEffect(() => {
-    localStorage.setItem('bodeguero_proveedores_v1', JSON.stringify(proveedores));
+    safeSetLocalStorage('bodeguero_proveedores_v1', proveedores);
+    setAllInStore('proveedores', proveedores).catch(() => {});
   }, [proveedores]);
 
   const handleCrearProveedor = (nuevo: Partial<Proveedor>) => {
@@ -286,10 +343,7 @@ export default function App() {
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [bcvData, setBcvData] = useState<BcvRateResponse | null>(null);
   const [userRole, setUserRole] = useState<'Administrador' | 'Cajero'>('Administrador');
-  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(() => {
-    const saved = localStorage.getItem('legatix_is_super_admin');
-    return saved !== null ? saved === 'true' : true;
-  });
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false);
 
   const isUserAdminOrOwner = isSuperAdmin || config?.rolUsuarioActual === 'Dueño' || config?.rolUsuarioActual === 'Administrador' || userRole === 'Administrador';
 
@@ -299,10 +353,6 @@ export default function App() {
       setActiveTab('pos');
     }
   }, [isUserAdminOrOwner, activeTab]);
-
-  useEffect(() => {
-    localStorage.setItem('legatix_is_super_admin', isSuperAdmin ? 'true' : 'false');
-  }, [isSuperAdmin]);
 
   // Native Mobile Back Button & Navigation Stack Handlers
   useNativeBackHandler(showCalculator, () => setShowCalculator(false), 'app_calculator');
@@ -347,17 +397,15 @@ export default function App() {
   };
 
   const handleToggleSuperAdmin = () => {
+    const currentEmail = session?.user?.email?.trim().toLowerCase() || '';
     if (isSuperAdmin) {
       setIsSuperAdmin(false);
       toast.success('Modo Cliente activado. El rubro comercial ha sido sellado.');
+    } else if (currentEmail === SUPER_ADMIN_EMAIL) {
+      setIsSuperAdmin(true);
+      toast.success('👑 Modo Administrador General activado.');
     } else {
-      const pin = prompt('Ingrese PIN Maestro de Administrador General (Legatix):');
-      if (pin === '2026' || pin === 'legatix' || (config?.pinSuperAdmin && pin === config.pinSuperAdmin)) {
-        setIsSuperAdmin(true);
-        toast.success('👑 Modo Administrador General activado. Control total de rubros habilitado.');
-      } else if (pin !== null) {
-        toast.error('PIN incorrecto. Acceso exclusivo para el Administrador General.');
-      }
+      toast.error('Acceso denegado: función exclusiva del Administrador General (Javiercol28@gmail.com).');
     }
   };
 
@@ -373,11 +421,24 @@ export default function App() {
       setActiveTab('pos'); // Force to POS view when becoming cashier
       toast.success('Cambiaste a Modo Cajero (Vista Limitada)');
     } else {
-      // In a real app this would ask for a PIN, but for MVP we just toggle back
-      const pin = prompt('Ingrese PIN de Administrador (MVP: dejar en blanco o presionar OK):');
-      if (pin !== null) {
+      const pin = prompt('Ingrese el PIN de un usuario Dueño o Administrador:');
+      if (pin === null) return;
+      const cleanPin = pin.trim();
+      if (!cleanPin) {
+        toast.error('Debes ingresar un PIN válido.');
+        return;
+      }
+      const adminUsers = (config.usuariosNegocio || []).filter(
+        (u) => u.activo && (u.rol === 'Dueño' || u.rol === 'Administrador')
+      );
+      const matchesAdminUser = adminUsers.some((u) => u.pinAcceso && u.pinAcceso.trim() === cleanPin);
+      const matchesMasterPin = Boolean(config.pinSuperAdmin && cleanPin === config.pinSuperAdmin.trim());
+
+      if (matchesAdminUser || matchesMasterPin || isSuperAdmin) {
         setUserRole('Administrador');
         toast.success('Cambiaste a Modo Administrador');
+      } else {
+        toast.error('PIN de Administrador incorrecto.');
       }
     }
   };
@@ -501,28 +562,28 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [userRole, isSuperAdmin, config?.rolUsuarioActual]);
 
-  // Sync to Storage (IndexedDB + localStorage fallback)
+  // Sync to Storage (IndexedDB + safe localStorage fallback)
   useEffect(() => {
-    localStorage.setItem('bodeguero_config_v3', JSON.stringify(config));
+    safeSetLocalStorage('bodeguero_config_v3', config);
   }, [config]);
 
   useEffect(() => {
-    localStorage.setItem('bodeguero_productos_v3', JSON.stringify(productos));
+    safeSetLocalStorage('bodeguero_productos_v3', productos);
     setAllInStore('productos', productos).catch(() => {});
   }, [productos]);
 
   useEffect(() => {
-    localStorage.setItem('bodeguero_clientes_v3', JSON.stringify(clientes));
+    safeSetLocalStorage('bodeguero_clientes_v3', clientes);
     setAllInStore('clientes', clientes).catch(() => {});
   }, [clientes]);
 
   useEffect(() => {
-    localStorage.setItem('bodeguero_ventas_v3', JSON.stringify(ventas));
+    safeSetLocalStorage('bodeguero_ventas_v3', ventas);
     setAllInStore('ventas', ventas).catch(() => {});
   }, [ventas]);
 
   useEffect(() => {
-    localStorage.setItem('bodeguero_abonos_v3', JSON.stringify(abonos));
+    safeSetLocalStorage('bodeguero_abonos_v3', abonos);
     setAllInStore('abonos', abonos).catch(() => {});
   }, [abonos]);
 
@@ -553,7 +614,10 @@ export default function App() {
         (a.ID_Cliente && a.ID_Cliente === c.ID_Cliente) ||
         (a.Nombre_Cliente && c.Nombre_Completo && a.Nombre_Cliente.trim().toLowerCase() === c.Nombre_Completo.trim().toLowerCase())
       );
-      const totalAbonado = clientAbonos.reduce((acc, a) => acc + (Number(a.Monto_USD) || 0), 0);
+      const totalAbonado = clientAbonos.reduce(
+        (acc, a) => acc + (Number(a.Monto_Abonado ?? (a as any).Monto_USD) || 0),
+        0
+      );
 
       const computedDebt = Math.max(0, Number((totalCreditoVentas - totalAbonado).toFixed(2)));
 
@@ -908,8 +972,8 @@ export default function App() {
     Deuda_Total?: number | string;
     Deglose?: string;
   }): Cliente => {
-    // Preserve passed ID_Cliente if provided (prevents mismatch with POS or callers), or generate a clean sequential ID
-    const newId = nuevoCliente.ID_Cliente?.trim() || `CLI-${(clientes.length + 1).toString().padStart(3, '0')}`;
+    // Preserve passed ID_Cliente if provided (prevents mismatch with POS or callers), or generate a collision-free sequential ID
+    const newId = nuevoCliente.ID_Cliente?.trim() || generateNextSequentialId('CLI', clientes.map((c) => c.ID_Cliente));
     
     // Robust number parsing for debt (handles string with commas/decimals, Deuda_Inicial or Deuda_Total)
     const rawDeuda = (nuevoCliente as any).Deuda_Inicial !== undefined 
@@ -1143,8 +1207,8 @@ export default function App() {
 
   // Business Logic: Create new Product
   const handleCrearProducto = async (nuevo: Omit<Producto, 'ID_Producto'>) => {
-    // 1. Optimistic Local Update
-    const newId = `PROD-${(productos.length + 1).toString().padStart(3, '0')}`;
+    // 1. Optimistic Local Update with collision-free ID
+    const newId = generateNextSequentialId('PROD', productos.map((p) => p.ID_Producto));
     const prodObj: Producto = {
       ID_Producto: newId,
       user_id: session?.user?.id,
@@ -1275,8 +1339,10 @@ export default function App() {
   }
 
   const handleUnlockLicense = (enteredPin: string): boolean => {
-    const masterPin = config.pinSuperAdmin || '2026';
-    if (enteredPin === masterPin || enteredPin === 'LEGATIX2026' || enteredPin === 'admin123456') {
+    const cleanPin = (enteredPin || '').trim();
+    if (!cleanPin) return false;
+    const masterPin = (config.pinSuperAdmin || '').trim();
+    if ((masterPin && cleanPin === masterPin) || cleanPin === 'LEGATIX2026') {
       const updatedConfig: ConfiguracionApp = {
         ...config,
         licenciaActiva: true,
@@ -1288,6 +1354,14 @@ export default function App() {
     }
     return false;
   };
+
+  if (isCheckingAuth) {
+    return (
+      <div className="h-[100dvh] w-full bg-[#090A0D] flex items-center justify-center text-[#D4AF37] font-mono text-xs uppercase tracking-widest">
+        Verificando sesión segura...
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (

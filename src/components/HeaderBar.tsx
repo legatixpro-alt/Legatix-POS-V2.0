@@ -69,7 +69,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
   return (
     <>
-      <header className="bg-[#101114]/95 backdrop-blur-md border-b border-[#D4AF37]/30 px-2.5 sm:px-6 py-2 sm:py-3 text-white select-none z-40 relative shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+      <header className="bg-[#101114]/95 backdrop-blur-md border-b border-[#D4AF37]/30 px-2.5 sm:px-6 py-2 sm:py-3 safe-top safe-x text-white select-none z-40 relative shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
         <div className="flex items-center justify-between gap-2 sm:gap-6 w-full">
           
           {/* Brand & Store Name (Spacious, Responsive & Legible) */}
@@ -234,12 +234,12 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
           {/* Quick Actions Bar */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Direct Button: Pantalla Completa */}
+            {/* Direct Button: Pantalla Completa (oculto en móvil para evitar desbordamiento en 360px/375px; la PWA ya usa standalone) */}
             <button
               type="button"
               onClick={handleToggleFullscreen}
               title={isFullscreen ? "Salir de pantalla completa (F11 o Esc)" : "Pantalla Completa para Punto de Venta (F11)"}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer shrink-0 border ${
+              className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer shrink-0 border ${
                 isFullscreen
                   ? 'border-[#00E676]/60 bg-[#00E676]/15 text-[#00E676] shadow-[0_0_12px_rgba(0,230,118,0.25)]'
                   : 'border-[#D4AF37]/40 bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 text-[#FFF0BA] hover:border-[#D4AF37]/70 shadow-[0_0_10px_rgba(212,175,55,0.1)]'
@@ -326,14 +326,14 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               <LogOut size={13} />
             </button>
 
-            {/* Mobile / Tablet Hamburger Menu Toggle */}
+            {/* Mobile / Tablet Hamburger Menu Toggle (Touch Target >= 44x44px) */}
             <button
               type="button"
               onClick={() => setIsMenuOpen(true)}
-              className="xl:hidden flex items-center justify-center p-1.5 rounded-lg text-gray-300 hover:text-white bg-white/5 border border-white/10 cursor-pointer"
+              className="xl:hidden flex items-center justify-center min-w-[44px] min-h-[44px] p-2 rounded-lg text-gray-300 hover:text-white bg-white/5 border border-white/10 cursor-pointer active:scale-95 transition-transform"
               title="Abrir menú"
             >
-              <Menu size={18} />
+              <Menu size={20} />
             </button>
           </div>
         </div>
@@ -341,7 +341,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
       {/* Full Screen Menu Overlay */}
       {isMenuOpen && (
-        <div className="fixed inset-0 z-50 bg-[#0E0F12]/95 backdrop-blur-lg flex flex-col animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 bg-[#0E0F12]/95 backdrop-blur-lg flex flex-col animate-in fade-in duration-200 safe-top safe-bottom">
           <div className="flex justify-between items-center p-5 border-b border-white/10 max-w-xl w-full mx-auto">
             <div className="flex items-center gap-2.5">
               <Store size={18} className="text-[#D4AF37]" />
@@ -351,7 +351,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             </div>
             <button 
               onClick={() => setIsMenuOpen(false)}
-              className="text-gray-400 hover:text-white p-2 active:scale-90 transition-transform cursor-pointer"
+              className="text-gray-400 hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center p-2 active:scale-90 transition-transform cursor-pointer"
             >
               <X size={26} />
             </button>

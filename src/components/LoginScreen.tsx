@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lock, User, AlertCircle, ShieldAlert } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { PWAInstallButton } from './PWAInstallButton';
-import { isUserBlocked, recordFailedAttempt, resetFailedAttempts } from '../utils/securityManager';
+import { isUserBlocked, recordFailedAttempt, resetFailedAttempts, syncBlockedUsersFromCloud } from '../utils/securityManager';
 
 interface LoginScreenProps {
   onLogin: () => void;
@@ -13,6 +13,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    syncBlockedUsersFromCloud();
+  }, []);
 
   const translateAuthError = (message: string): string => {
     if (!message) return 'Ocurrió un error en la autenticación.';
@@ -84,8 +88,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="flex flex-col min-h-[100dvh] bg-[#090A0D] text-white w-full overflow-y-auto">
-      <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 pb-20 w-full max-w-md mx-auto my-auto">
+    <div className="flex flex-col min-h-[100dvh] bg-[#090A0D] text-white w-full overflow-y-auto safe-top safe-bottom safe-x">
+      <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 pb-12 w-full max-w-md mx-auto my-auto">
         
         {/* Emblem - Moneda Dorada Legatix recortada sin fondo */}
         <div 

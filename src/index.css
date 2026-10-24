@@ -18,6 +18,22 @@
     background-size: 32px 32px;
     background-position: center top;
     background-attachment: fixed;
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Android & iOS Mobile Optimizations:
+     1. Disable background-attachment: fixed on mobile to eliminate GPU repaint lag
+     2. Force 16px minimum font-size on inputs/selects/textareas to prevent iOS Safari auto-zoom on keyboard focus */
+  @media (max-width: 768px) {
+    body {
+      background-attachment: scroll;
+    }
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
   }
   
   /* Make sure headings use the display font */
@@ -100,6 +116,18 @@
 
   .text-shadow-glow {
     text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+  }
+
+  /* iOS / Android Safe Area Utilities (Notch, Dynamic Island, Gesture Bar) */
+  .safe-top {
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+  }
+  .safe-bottom {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+  .safe-x {
+    padding-left: max(0.625rem, env(safe-area-inset-left));
+    padding-right: max(0.625rem, env(safe-area-inset-right));
   }
 }
 

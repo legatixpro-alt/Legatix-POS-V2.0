@@ -273,11 +273,19 @@ Por favor verifica tu conexión y vuelve a intentar tu pregunta.`,
     }
   };
 
-  const handleCopyMessage = (id: string, text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    toast.success('Copiado al portapapeles');
-    setTimeout(() => setCopiedId(null), 2000);
+  const handleCopyMessage = async (id: string, text: string) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        setCopiedId(id);
+        toast.success('Copiado al portapapeles');
+        setTimeout(() => setCopiedId(null), 2000);
+      } else {
+        toast.error('Portapapeles no disponible en este navegador');
+      }
+    } catch {
+      toast.error('No se pudo copiar al portapapeles');
+    }
   };
 
   // Render markdown with nice formatting
@@ -337,8 +345,16 @@ Por favor verifica tu conexión y vuelve a intentar tu pregunta.`,
     });
   };
 
+  const escapeHtml = (str: string): string =>
+    str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
   const parseInlineStyles = (raw: string): string => {
-    return raw
+    return escapeHtml(raw)
       .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>')
       .replace(/\*(.*?)\*/g, '<em class="text-gray-300 italic">$1</em>')
       .replace(/`(.*?)`/g, '<code class="bg-black/60 px-1 py-0.5 rounded text-[#D4AF37] font-mono text-[11px] border border-white/10">$1</code>');

@@ -743,9 +743,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
               {searchTerm && (
                 <button 
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-2.5 top-2.5 text-gray-400 hover:text-white p-0.5 cursor-pointer"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white min-w-[36px] min-h-[36px] flex items-center justify-center cursor-pointer"
                 >
-                  <X size={15} />
+                  <X size={16} />
                 </button>
               )}
             </div>
@@ -1570,7 +1570,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
           )}
 
           {/* 5. Distribución de Botones de Acción (Cliente/Fiado + Botón de Cobro) */}
-          <div className="flex items-center gap-2 pt-0.5">
+          <div className="flex items-center gap-2 pt-0.5 safe-bottom">
             {/* Botón de Asignar Cliente / Fiado directo */}
             <button
               type="button"

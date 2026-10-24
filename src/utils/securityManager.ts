@@ -1,3 +1,6 @@
+import { supabase, isCloudAvailable } from '../lib/supabase';
+import { getKV, setKV } from '../lib/storage';
+
 export const SUPER_ADMIN_EMAIL = 'javiercol28@gmail.com';
 const STORAGE_KEY_BLOCKED_USERS = 'legatix_blocked_users_v1';
 const STORAGE_KEY_ATTEMPTS = 'legatix_login_attempts_v1';
@@ -8,6 +11,47 @@ export interface BlockedUserInfo {
   blockedAt: string;
   reason: string;
   attemptsCount: number;
+}
+
+/**
+ * Sincroniza la lista de usuarios bloqueados entre localStorage, IndexedDB y Supabase (si la tabla usuarios_bloqueados existe).
+ */
+export async function syncBlockedUsersFromCloud(): Promise<void> {
+  try {
+    const rawLocal = localStorage.getItem(STORAGE_KEY_BLOCKED_USERS);
+    const localMap: Record<string, BlockedUserInfo> = rawLocal ? JSON.parse(rawLocal) : {};
+
+    // 1. Hidratar desde IndexedDB por si localStorage fue limpiado parcialmente
+    const idbMap = await getKV<Record<string, BlockedUserInfo>>(STORAGE_KEY_BLOCKED_USERS, {});
+    const mergedMap: Record<string, BlockedUserInfo> = { ...idbMap, ...localMap };
+
+    // 2. Consultar tabla usuarios_bloqueados en Supabase si hay conexión
+    if (isCloudAvailable()) {
+      const { data, error } = await supabase
+        .from('usuarios_bloqueados')
+        .select('email, blocked_at, reason, attempts_count');
+
+      if (!error && Array.isArray(data)) {
+        for (const row of data) {
+          if (row.email && row.email.trim().toLowerCase() !== SUPER_ADMIN_EMAIL) {
+            const cleanEmail = row.email.trim().toLowerCase();
+            mergedMap[cleanEmail] = {
+              email: cleanEmail,
+              blockedAt: row.blocked_at || new Date().toISOString(),
+              reason: row.reason || 'Superó el límite de 3 intentos fallidos de contraseña',
+              attemptsCount: Number(row.attempts_count) || 3,
+            };
+          }
+        }
+      }
+    }
+
+    localStorage.setItem(STORAGE_KEY_BLOCKED_USERS, JSON.stringify(mergedMap));
+    await setKV(STORAGE_KEY_BLOCKED_USERS, mergedMap);
+    window.dispatchEvent(new CustomEvent(SECURITY_EVENT));
+  } catch {
+    // Fallback silencioso si la tabla aún no existe o el navegador está offline
+  }
 }
 
 /** Comprueba si un usuario (correo) está actualmente bloqueado */
@@ -39,7 +83,7 @@ export function getBlockedUsersList(): BlockedUserInfo[] {
   }
 }
 
-/** Registra un intento fallido de contraseña. Al llegar a 3, bloquea la cuenta. */
+/** Registra un intento fallido de contraseña. Al llegar a 3, bloquea la cuenta local y en la nube. */
 export function recordFailedAttempt(email: string): { isNowBlocked: boolean; remainingAttempts: number } {
   const clean = email.trim().toLowerCase();
   if (clean === SUPER_ADMIN_EMAIL) return { isNowBlocked: false, remainingAttempts: 3 };
@@ -51,18 +95,38 @@ export function recordFailedAttempt(email: string): { isNowBlocked: boolean; rem
     const count = (attemptsMap[clean] || 0) + 1;
     attemptsMap[clean] = count;
     localStorage.setItem(STORAGE_KEY_ATTEMPTS, JSON.stringify(attemptsMap));
+    setKV(STORAGE_KEY_ATTEMPTS, attemptsMap).catch(() => {});
 
     if (count >= 3) {
       // Bloquear al usuario
       const rawBlocked = localStorage.getItem(STORAGE_KEY_BLOCKED_USERS);
       const blockedMap: Record<string, BlockedUserInfo> = rawBlocked ? JSON.parse(rawBlocked) : {};
-      blockedMap[clean] = {
+      const blockInfo: BlockedUserInfo = {
         email: clean,
         blockedAt: new Date().toISOString(),
         reason: 'Superó el límite de 3 intentos fallidos de contraseña',
         attemptsCount: count,
       };
+      blockedMap[clean] = blockInfo;
       localStorage.setItem(STORAGE_KEY_BLOCKED_USERS, JSON.stringify(blockedMap));
+      setKV(STORAGE_KEY_BLOCKED_USERS, blockedMap).catch(() => {});
+
+      if (isCloudAvailable()) {
+        Promise.resolve(
+          supabase.from('usuarios_bloqueados').upsert(
+            [
+              {
+                email: clean,
+                blocked_at: blockInfo.blockedAt,
+                reason: blockInfo.reason,
+                attempts_count: blockInfo.attemptsCount,
+              },
+            ],
+            { onConflict: 'email' }
+          )
+        ).catch(() => {});
+      }
+
       window.dispatchEvent(new CustomEvent(SECURITY_EVENT));
       return { isNowBlocked: true, remainingAttempts: 0 };
     }
@@ -83,6 +147,7 @@ export function resetFailedAttempts(email: string): void {
       const attemptsMap: Record<string, number> = JSON.parse(rawAttempts);
       delete attemptsMap[clean];
       localStorage.setItem(STORAGE_KEY_ATTEMPTS, JSON.stringify(attemptsMap));
+      setKV(STORAGE_KEY_ATTEMPTS, attemptsMap).catch(() => {});
     }
   } catch {}
 }
@@ -106,6 +171,12 @@ export function unblockUser(emailToUnblock: string, operatorEmail?: string, isSu
       const blockedMap: Record<string, BlockedUserInfo> = JSON.parse(rawBlocked);
       delete blockedMap[clean];
       localStorage.setItem(STORAGE_KEY_BLOCKED_USERS, JSON.stringify(blockedMap));
+      setKV(STORAGE_KEY_BLOCKED_USERS, blockedMap).catch(() => {});
+    }
+    if (isCloudAvailable()) {
+      Promise.resolve(
+        supabase.from('usuarios_bloqueados').delete().eq('email', clean)
+      ).catch(() => {});
     }
     resetFailedAttempts(clean);
     window.dispatchEvent(new CustomEvent(SECURITY_EVENT));

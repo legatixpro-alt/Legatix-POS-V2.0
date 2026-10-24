@@ -109,11 +109,11 @@ export async function checkRealInternet(): Promise<boolean> {
     return false;
   }
   try {
-    // Fast ping with cache buster
+    // Fast ping with cache buster against real backend health endpoint (with static asset fallback)
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3500);
-    const res = await fetch(`/favicon.ico?_t=${Date.now()}`, {
-      method: 'HEAD',
+    const res = await fetch(`/api/health?_t=${Date.now()}`, {
+      method: 'GET',
       cache: 'no-store',
       signal: controller.signal
     });

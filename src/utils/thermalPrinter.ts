@@ -53,22 +53,39 @@ export function generateReceiptText(venta: VentaMaestro, config: ConfiguracionAp
   return out;
 }
 
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export function printThermalTicket(venta: VentaMaestro, config: ConfiguracionApp): void {
   if (typeof window === 'undefined') return;
 
   const tasa = venta.Tasa_Cambio_Aplicada || config.tasaCambioUSD || 1;
-  const simbolo = config.simboloMonedaLocal || 'Bs.';
+  const simbolo = escapeHtml(config.simboloMonedaLocal || 'Bs.');
   const totalLocal = (venta.Total_Moneda_Local || venta.Total_Venta * tasa).toLocaleString('es-VE', { minimumFractionDigits: 2 });
 
   const printWindow = window.open('', '_blank', 'width=380,height=600');
   if (!printWindow) return;
+
+  const safeBodega = escapeHtml(config.nombreBodega || 'Legatix POS');
+  const safeRif = config.rif ? escapeHtml(config.rif) : '';
+  const safeTel = config.telefonoAdmin ? escapeHtml(config.telefonoAdmin) : '';
+  const safeTicketId = escapeHtml(venta.ID_Transaccion);
+  const safeFecha = escapeHtml(venta.Fecha_Hora);
+  const safeCliente = venta.Nombre_Cliente ? escapeHtml(venta.Nombre_Cliente) : '';
+  const safeMetodo = escapeHtml(venta.Metodo_Pago);
 
   const html = `
     <!DOCTYPE html>
     <html>
       <head>
         <meta charset="utf-8" />
-        <title>Ticket #${venta.ID_Transaccion}</title>
+        <title>Ticket #${safeTicketId}</title>
         <style>
           @page {
             margin: 0;
@@ -97,15 +114,15 @@ export function printThermalTicket(venta: VentaMaestro, config: ConfiguracionApp
         </style>
       </head>
       <body>
-        <div class="center bold" style="font-size: 14px;">${config.nombreBodega || 'MI BODEGA'}</div>
-        ${config.rif ? `<div class="center">RIF: ${config.rif}</div>` : ''}
-        ${config.telefonoAdmin ? `<div class="center">Tel: ${config.telefonoAdmin}</div>` : ''}
+        <div class="center bold" style="font-size: 14px;">${safeBodega}</div>
+        ${safeRif ? `<div class="center">RIF: ${safeRif}</div>` : ''}
+        ${safeTel ? `<div class="center">Tel: ${safeTel}</div>` : ''}
         <div class="double-divider"></div>
 
-        <div><strong>Ticket:</strong> #${venta.ID_Transaccion}</div>
-        <div><strong>Fecha:</strong> ${venta.Fecha_Hora}</div>
-        ${venta.Nombre_Cliente ? `<div><strong>Cliente:</strong> ${venta.Nombre_Cliente}</div>` : ''}
-        <div><strong>Método:</strong> ${venta.Metodo_Pago}</div>
+        <div><strong>Ticket:</strong> #${safeTicketId}</div>
+        <div><strong>Fecha:</strong> ${safeFecha}</div>
+        ${safeCliente ? `<div><strong>Cliente:</strong> ${safeCliente}</div>` : ''}
+        <div><strong>Método:</strong> ${safeMetodo}</div>
         
         <div class="divider"></div>
         <table>
@@ -121,9 +138,9 @@ export function printThermalTicket(venta: VentaMaestro, config: ConfiguracionApp
               .map(
                 (i) => `
               <tr>
-                <td valign="top">${i.cantidad}</td>
-                <td valign="top">${i.producto?.Nombre || (i as any).Nombre || 'Item'}</td>
-                <td align="right" valign="top">$${(i.cantidad * (i.producto?.Precio_Venta || (i as any).Precio_Venta || 0)).toFixed(2)}</td>
+                <td valign="top">${Number(i.cantidad) || 0}</td>
+                <td valign="top">${escapeHtml(i.producto?.Nombre || (i as any).Nombre || 'Item')}</td>
+                <td align="right" valign="top">$${((Number(i.cantidad) || 0) * (Number(i.producto?.Precio_Venta ?? (i as any).Precio_Venta) || 0)).toFixed(2)}</td>
               </tr>
             `
               )

@@ -11,6 +11,14 @@ const ipRequestCounts = new Map<string, { count: number; resetAt: number }>();
 
 function checkRateLimit(ip: string, maxRequests: number, windowMs: number): boolean {
   const now = Date.now();
+  // Periodic pruning of expired IP records to prevent memory exhaustion
+  if (ipRequestCounts.size > 500) {
+    for (const [key, val] of ipRequestCounts.entries()) {
+      if (now > val.resetAt) {
+        ipRequestCounts.delete(key);
+      }
+    }
+  }
   const record = ipRequestCounts.get(ip);
   if (!record || now > record.resetAt) {
     ipRequestCounts.set(ip, { count: 1, resetAt: now + windowMs });
@@ -25,9 +33,19 @@ function checkRateLimit(ip: string, maxRequests: number, windowMs: number): bool
 
 async function startServer() {
   const app = express();
+  app.disable('x-powered-by');
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-  app.use(express.json({ limit: '10mb' }));
+  // OWASP Security Headers Middleware
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
+    next();
+  });
+
+  app.use(express.json({ limit: '1mb' }));
 
   // Health check endpoint for cloud orchestrators (Docker / Cloud Run / Kubernetes / Render)
   app.get('/api/health', (_req, res) => {
