@@ -130,7 +130,7 @@ export const NotaEntregaModal: React.FC<NotaEntregaModalProps> = ({
       const logoEl = document.getElementById('nota-entrega-logo') as HTMLImageElement;
       if (logoEl && logoEl.complete && logoEl.naturalWidth > 0) {
         try {
-          doc.addImage(logoEl, 'JPEG', 14, 8, 16, 16);
+          doc.addImage(logoEl, 'PNG', 14, 8, 16, 16);
         } catch (e) {
           console.warn('No se pudo añadir logo al PDF:', e);
         }
@@ -138,7 +138,7 @@ export const NotaEntregaModal: React.FC<NotaEntregaModalProps> = ({
 
       doc.setFontSize(14);
       doc.setTextColor(20, 20, 20);
-      doc.text((config.nombreBodega || 'OH Store').toUpperCase(), pageWidth / 2, 14, { align: 'center' });
+      doc.text((config.nombreBodega || 'Legatix POS').toUpperCase(), pageWidth / 2, 14, { align: 'center' });
 
       doc.setFontSize(10);
       doc.setTextColor(60, 60, 60);
@@ -412,14 +412,14 @@ export const NotaEntregaModal: React.FC<NotaEntregaModalProps> = ({
                 <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden border border-gray-300 shadow-sm shrink-0 bg-black">
                   <img 
                     id="nota-entrega-logo"
-                    src="/oh-store-logo.jpg" 
-                    alt="OH Store Logo" 
+                    src="/pwa-512x512.png" 
+                    alt="Legatix Logo" 
                     className="w-full h-full object-cover" 
                   />
                 </div>
                 <div className="text-center sm:text-left">
                   <h2 className="text-lg sm:text-xl font-black uppercase tracking-wide text-gray-900 leading-tight">
-                    {config.nombreBodega || 'OH Store'}
+                    {config.nombreBodega || 'Legatix POS'}
                   </h2>
                   <p className="text-xs font-bold text-gray-800 mt-0.5">
                     RIF: {config.rif || 'J-50123849-0'}{config.telefonoAdmin ? ` • TEL: ${config.telefonoAdmin}` : ''}

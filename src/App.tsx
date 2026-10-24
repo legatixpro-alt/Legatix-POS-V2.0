@@ -152,8 +152,8 @@ export default function App() {
         if (parsed.propietario === 'Don José Pérez') {
           parsed.propietario = '';
         }
-        if (!parsed.nombreBodega || parsed.nombreBodega === 'Minimarket La Bendición' || parsed.nombreBodega === 'Librería y Papelería El Éxito' || parsed.nombreBodega === 'Mi Tienda de Ropa' || parsed.nombreBodega === 'LEGATIX POS') {
-          parsed.nombreBodega = 'OH Store';
+        if (!parsed.nombreBodega || parsed.nombreBodega === 'Minimarket La Bendición' || parsed.nombreBodega === 'Librería y Papelería El Éxito' || parsed.nombreBodega === 'Mi Tienda de Ropa' || parsed.nombreBodega === 'OH Store') {
+          parsed.nombreBodega = 'Legatix POS';
         }
         if (!parsed.rubro || parsed.rubro === 'Bodega' || parsed.rubro === 'Tienda de Ropa' || parsed.rubro === 'Papelería') {
           parsed.rubro = 'Ropa Deportiva';

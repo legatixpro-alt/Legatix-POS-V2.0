@@ -1,6 +1,6 @@
 {
-  "name": "OH Store",
-  "description": "Micro-SaaS B2B móvil para bodegas: POS rápido con código de barras, fiados, inventario dinámico, cierre de caja y arquitectura AppSheet + Google Sheets.",
+  "name": "Legatix POS",
+  "description": "Sistema inteligente de Punto de Venta (POS), control de inventario, facturación y gestión comercial en tiempo real.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

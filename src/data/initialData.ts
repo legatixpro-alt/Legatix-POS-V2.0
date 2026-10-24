@@ -3,7 +3,7 @@ import { Producto, Cliente, VentaMaestro, DetalleVenta, Abono, ConfiguracionApp,
 export const initialConfig: ConfiguracionApp = {
   tasaCambioUSD: 871.37, // Tasa de cambio oficial referencial (Moneda Local / USD)
   simboloMonedaLocal: 'Bs.',
-  nombreBodega: 'OH Store',
+  nombreBodega: 'Legatix POS',
   rubro: 'Ropa Deportiva',
   rif: '',
   direccion: '',

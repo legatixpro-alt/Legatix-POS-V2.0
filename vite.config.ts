@@ -66,9 +66,9 @@ export default defineConfig(() => {
         includeAssets: ['favicon.png', 'apple-touch-icon.png', 'icon.svg'],
         manifest: {
           id: '/',
-          name: 'OH Store POS',
-          short_name: 'OH Store',
-          description: 'Sistema de punto de venta y gestión de inventario.',
+          name: 'Legatix POS',
+          short_name: 'Legatix POS',
+          description: 'Sistema inteligente de Punto de Venta (POS) y gestión de inventario.',
           theme_color: '#000000',
           background_color: '#000000',
           display: 'standalone',

@@ -87,15 +87,9 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 />
               </div>
               <div className="flex flex-col shrink-0 min-w-max">
-                <div className="flex items-baseline gap-1.5 whitespace-nowrap">
-                  <span className="text-sm xs:text-base sm:text-lg md:text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-[#FFF0BA] via-[#D4AF37] to-[#ECC855] font-display uppercase leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                    LEGATIX
-                  </span>
-                  <span className="text-gray-600 text-xs">|</span>
-                  <span className="text-[11px] xs:text-xs sm:text-sm font-bold tracking-wide text-white font-display uppercase leading-tight truncate max-w-[110px] xs:max-w-[150px] sm:max-w-[240px]" title={config?.nombreBodega || 'OH Store'}>
-                    {config?.nombreBodega || 'OH Store'}
-                  </span>
-                </div>
+                <span className="text-sm xs:text-base sm:text-lg md:text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-[#FFF0BA] via-[#D4AF37] to-[#ECC855] font-display uppercase leading-tight whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                  LEGATIX
+                </span>
                 <div className="flex items-center gap-1.5 text-[9px] xs:text-[10px] sm:text-[11px] text-gray-400 font-mono whitespace-nowrap mt-0.5">
                   {config?.propietario && (
                     <>
@@ -369,15 +363,15 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               <div className="flex items-center gap-3.5">
                 <div className="w-12 h-12 rounded-xl overflow-hidden border border-[#D4AF37]/60 shadow-[0_0_12px_rgba(212,175,55,0.25)] flex items-center justify-center shrink-0 bg-black">
                   <img 
-                    src="/oh-store-logo.jpg" 
-                    alt="Logo OH Store" 
+                    src="/pwa-512x512.png" 
+                    alt="Logo Legatix" 
                     className="w-full h-full object-cover" 
                   />
                 </div>
                 <div>
                   <span className="text-[10px] uppercase tracking-wider text-gray-400 font-bold block">Negocio Activo</span>
                   <h4 className="text-base font-bold text-white font-display uppercase tracking-wide">
-                    {config?.nombreBodega || 'OH Store'}
+                    {config?.nombreBodega || 'Legatix POS'}
                   </h4>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-xs text-[#D4AF37] font-semibold">

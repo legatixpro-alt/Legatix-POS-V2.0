@@ -48,7 +48,7 @@ export function generateReceiptText(venta: VentaMaestro, config: ConfiguracionAp
 
   out += `${doubleLine}\n`;
   out += `   ¡Gracias por su compra!\n`;
-  out += `  OH Store\n`;
+  out += `  Legatix POS\n`;
 
   return out;
 }
@@ -140,7 +140,7 @@ export function printThermalTicket(venta: VentaMaestro, config: ConfiguracionApp
 
         <div class="double-divider"></div>
         <div class="center bold">¡GRACIAS POR SU COMPRA!</div>
-        <div class="center" style="font-size: 9px; margin-top: 4px;">OH Store POS</div>
+        <div class="center" style="font-size: 9px; margin-top: 4px;">Legatix POS</div>
         <script>
           window.onload = function() {
             window.print();
